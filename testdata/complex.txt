@@ -1,0 +1,32 @@
+Lorem ipsum      [1mThis is text in[0m  Lorem ipsum
+dolor sit amet,  [1mbold[0m and this    dolor sit amet,
+consectetur      is normal text.  consectetur
+adipiscing       [3mThis text is[0m     adipiscing
+elit, sed do     [3min italics[0m and   elit, sed do
+eiusmod tempor   [9mthis one is[0m      eiusmod tempor
+incididunt ut    [9mstrikethrough[0m.   incididunt ut
+labore et        [31mThis is in a[0m     labore et
+dolore magna     [31mred font color.[0m  dolore magna
+aliqua. Ut enim  [31m[0mThis is          aliqua. Ut enim
+ad minim         double-width     ad minim
+veniam, quis     text: 私はフラ   veniam, quis
+nostrud          イドポテトです   nostrud
+exercitation     。               exercitation
+ullamco laboris                   ullamco laboris
+nisi                              nisi
+[1mThis is text in[0m  Lorem ipsum      [1mThis is text in[0m
+[1mbold[0m and this    dolor sit amet,  [1mbold[0m and this
+is normal text.  consectetur      is normal text.
+[3mThis text is[0m     adipiscing       [3mThis text is[0m
+[3min italics[0m and   elit, sed do     [3min italics[0m and
+[9mthis one is[0m      eiusmod tempor   [9mthis one is[0m
+[9mstrikethrough[0m.   incididunt ut    [9mstrikethrough[0m.
+[31mThis is in a[0m     labore et        [31mThis is in a[0m
+[31mred font color.[0m  dolore magna     [31mred font color.[0m
+[31m[0mThis is          aliqua. Ut enim  [31m[0mThis is
+double-width     ad minim         double-width
+text: 私はフラ   veniam, quis     text: 私はフラ
+イドポテトです   nostrud          イドポテトです
+。               exercitation     。
+                 ullamco laboris  
+                 nisi             

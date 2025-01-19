@@ -1,0 +1,35 @@
+[33m┌─────────────────┬─────────────────┬─────────────────┐[0m
+[33m│ [0mLorem ipsum    [33m │ [0mLorem ipsum    [33m │ [0mLorem ipsum    [33m │[0m
+[33m│ [0mdolor sit amet,[33m │ [0mdolor sit amet,[33m │ [0mdolor sit amet,[33m │[0m
+[33m│ [0mconsectetur    [33m │ [0mconsectetur    [33m │ [0mconsectetur    [33m │[0m
+[33m│ [0madipiscing     [33m │ [0madipiscing     [33m │ [0madipiscing     [33m │[0m
+[33m│ [0melit, sed do   [33m │ [0melit, sed do   [33m │ [0melit, sed do   [33m │[0m
+[33m│ [0meiusmod tempor [33m │ [0meiusmod tempor [33m │ [0m               [33m │[0m
+[33m│ [0mincididunt ut  [33m │ [0mincididunt ut  [33m │ [0m               [33m │[0m
+[33m│ [0mlabore et      [33m │ [0mlabore et      [33m │ [0m               [33m │[0m
+[33m│ [0mdolore magna   [33m │ [0mdolore magna   [33m │ [0m               [33m │[0m
+[33m│ [0maliqua. Ut enim[33m │ [0maliqua. Ut     [33m │ [0m               [33m │[0m
+[33m│ [0mad minim       [33m │ [0m               [33m │ [0m               [33m │[0m
+[33m│ [0mveniam, quis   [33m │ [0m               [33m │ [0m               [33m │[0m
+[33m│ [0mnostrud        [33m │ [0m               [33m │ [0m               [33m │[0m
+[33m│ [0mexercitation   [33m │ [0m               [33m │ [0m               [33m │[0m
+[33m│ [0mullamco laboris[33m │ [0m               [33m │ [0m               [33m │[0m
+[33m│ [0mnisi           [33m │ [0m               [33m │ [0m               [33m │[0m
+[33m├─────────────────┼─────────────────┼─────────────────┤[0m
+[33m│ [0mLorem ipsum    [33m │ [0mLorem ipsum    [33m │ [0mLorem ipsum    [33m │[0m
+[33m│ [0mdolor sit amet,[33m │ [0mdolor sit amet,[33m │ [0mdolor sit amet,[33m │[0m
+[33m│ [0mconsectetur    [33m │ [0mconsectetur    [33m │ [0mconsectetur    [33m │[0m
+[33m│ [0madipiscing     [33m │ [0madipiscing     [33m │ [0madipiscing     [33m │[0m
+[33m│ [0melit, sed do   [33m │ [0melit, sed do   [33m │ [0melit, sed do   [33m │[0m
+[33m│ [0m               [33m │ [0meiusmod tempor [33m │ [0meiusmod tempor [33m │[0m
+[33m│ [0m               [33m │ [0mincididunt ut  [33m │ [0mincididunt ut  [33m │[0m
+[33m│ [0m               [33m │ [0mlabore et      [33m │ [0mlabore et      [33m │[0m
+[33m│ [0m               [33m │ [0mdolore magna   [33m │ [0mdolore magna   [33m │[0m
+[33m│ [0m               [33m │ [0maliqua. Ut enim[33m │ [0maliqua. Ut     [33m │[0m
+[33m│ [0m               [33m │ [0mad minim       [33m │ [0m               [33m │[0m
+[33m│ [0m               [33m │ [0mveniam, quis   [33m │ [0m               [33m │[0m
+[33m│ [0m               [33m │ [0mnostrud        [33m │ [0m               [33m │[0m
+[33m│ [0m               [33m │ [0mexercitation   [33m │ [0m               [33m │[0m
+[33m│ [0m               [33m │ [0mullamco laboris[33m │ [0m               [33m │[0m
+[33m│ [0m               [33m │ [0mnisi           [33m │ [0m               [33m │[0m
+[33m└─────────────────┴─────────────────┴─────────────────┘[0m
