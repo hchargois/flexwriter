@@ -1,7 +1,5 @@
 package flexwriter
 
-import "cmp"
-
 // transpose transforms a list of columns (each possibly containing multiple
 // rows) into a list of rows.
 // The input may be sparse (i.e. some columns may have less rows than others),
@@ -37,10 +35,9 @@ func transform[F any, T any](s []F, f func(F) T) []T {
 	return out
 }
 
-func max[T cmp.Ordered](s []T) T {
+func max(s []int) int {
 	if len(s) == 0 {
-		var zero T
-		return zero
+		return 0
 	}
 
 	max := s[0]

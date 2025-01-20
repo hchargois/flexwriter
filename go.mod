@@ -1,6 +1,6 @@
 module github.com/hchargois/flexwriter
 
-go 1.22
+go 1.18
 
 require (
 	github.com/MichaelMure/go-term-text v0.3.1

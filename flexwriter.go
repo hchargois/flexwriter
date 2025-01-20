@@ -287,7 +287,7 @@ func (w *Writer) computeWidths() []int {
 
 	var sumRigidWidths int
 	var totalWeights int
-	for i := range nColumns {
+	for i := 0; i < nColumns; i++ {
 		col := w.getFilteredColumnDef(i)
 		switch tcol := col.(type) {
 		case Rigid:
@@ -301,7 +301,7 @@ func (w *Writer) computeWidths() []int {
 
 	remainingWidth := w.width - sumRigidWidths
 	remainingWidth -= decoratorWidth(w.deco, nColumns)
-	for i := range nColumns {
+	for i := 0; i < nColumns; i++ {
 		col := w.getFilteredColumnDef(i)
 		if flexed, ok := col.(Flexed); ok {
 			w := flexed.width(remainingWidth, totalWeights)
