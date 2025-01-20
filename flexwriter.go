@@ -63,6 +63,20 @@ func (r Rigid) align() Alignment {
 	return r.Align
 }
 
+// Omit columns will not appear in the output.
+//
+// This can be very useful in cases where it's simpler to modify the columns
+// configuration than the row data.
+type Omit struct{}
+
+func (o Omit) validated() Column {
+	return o
+}
+
+func (o Omit) align() Alignment {
+	return Left
+}
+
 // Flexed columns take a size proportional to their weight (vs all other flexed
 // columns weights), within the width remaining after rigid columns are placed,
 // and regardless of the size of their content.
@@ -100,11 +114,12 @@ func (f Flexed) align() Alignment {
 }
 
 type Writer struct {
-	width      int
-	output     io.Writer
-	defaultCol Column
-	columns    []Column
-	deco       Decorator
+	width           int
+	output          io.Writer
+	defaultCol      Column
+	columns         []Column // all column defs including Omits
+	filteredColumns []Column // column defs without Omits
+	deco            Decorator
 
 	mu        sync.Mutex
 	buffer    []byte
@@ -119,6 +134,12 @@ func (w *Writer) SetColumns(cols ...Column) {
 	w.columns = transform(cols, func(col Column) Column {
 		return col.validated()
 	})
+	for _, col := range w.columns {
+		if _, ok := col.(Omit); ok {
+			continue
+		}
+		w.filteredColumns = append(w.filteredColumns, col)
+	}
 }
 
 // SetDefaultColumn sets the default column configuration. This configuration is
@@ -217,19 +238,38 @@ func (w *Writer) WriteRow(cells ...any) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	w.writeRow(cells...)
+}
+
+func (w *Writer) writeRow(cells ...any) {
+	var filteredCells []any
+	for i, cell := range cells {
+		if _, ok := w.getColumnDef(i).(Omit); ok {
+			continue
+		}
+		filteredCells = append(filteredCells, cell)
+	}
+
 	toString := func(a any) string {
 		if s, ok := a.(string); ok {
 			return s
 		}
 		return fmt.Sprint(a)
 	}
-	scells := transform(cells, toString)
+	scells := transform(filteredCells, toString)
 	w.colBuffer = append(w.colBuffer, scells)
 }
 
 func (w *Writer) getColumnDef(i int) Column {
 	if i < len(w.columns) {
 		return w.columns[i]
+	}
+	return w.defaultCol
+}
+
+func (w *Writer) getFilteredColumnDef(i int) Column {
+	if i < len(w.filteredColumns) {
+		return w.filteredColumns[i]
 	}
 	return w.defaultCol
 }
@@ -248,7 +288,7 @@ func (w *Writer) computeWidths() []int {
 	var sumRigidWidths int
 	var totalWeights int
 	for i := range nColumns {
-		col := w.getColumnDef(i)
+		col := w.getFilteredColumnDef(i)
 		switch tcol := col.(type) {
 		case Rigid:
 			w := tcol.width(colLengths[i])
@@ -262,7 +302,7 @@ func (w *Writer) computeWidths() []int {
 	remainingWidth := w.width - sumRigidWidths
 	remainingWidth -= decoratorWidth(w.deco, nColumns)
 	for i := range nColumns {
-		col := w.getColumnDef(i)
+		col := w.getFilteredColumnDef(i)
 		if flexed, ok := col.(Flexed); ok {
 			w := flexed.width(remainingWidth, totalWeights)
 			remainingWidth -= w
@@ -275,13 +315,17 @@ func (w *Writer) computeWidths() []int {
 
 func (w *Writer) flushBuffer() {
 	rows := strings.Split(string(w.buffer), "\n")
+	// remove trailing empty line
 	if len(rows) > 0 && rows[len(rows)-1] == "" {
 		rows = rows[:len(rows)-1]
 	}
-	rowCols := transform(rows, func(row string) []string {
-		return strings.Split(row, "\t")
-	})
-	w.colBuffer = append(w.colBuffer, rowCols...)
+	for _, row := range rows {
+		var cells []any
+		for _, cell := range strings.Split(row, "\t") {
+			cells = append(cells, cell)
+		}
+		w.writeRow(cells...)
+	}
 	w.buffer = nil
 }
 
@@ -318,7 +362,7 @@ func (w *Writer) Flush() error {
 		for _, line := range transposed {
 			out.WriteString(w.deco.ColumnSeparator(ri, 0))
 			for ci, col := range line {
-				colAlign := w.getColumnDef(ci).align()
+				colAlign := w.getFilteredColumnDef(ci).align()
 				if ci != len(line)-1 {
 					out.WriteString(align(col, widths[ci], colAlign, true))
 					out.WriteString(w.deco.ColumnSeparator(ri, ci+1))

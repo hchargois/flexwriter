@@ -272,3 +272,27 @@ func (debugDecorator) RowSeparator(rowIdx int, widths []int) string {
 func (debugDecorator) ColumnSeparator(rowIdx, colIdx int) string {
 	return fmt.Sprintf(" %d/%d ", rowIdx, colIdx)
 }
+
+func TestOmit(t *testing.T) {
+	var buf bytes.Buffer
+	writer := New()
+	writer.SetOutput(&buf)
+	writer.SetColumns(
+		Rigid{},
+		Omit{},
+		Rigid{},
+	)
+	writer.SetDefaultColumn(Omit{})
+	writer.SetDecorator(BoxDrawingTableDecorator())
+
+	writer.WriteRow("A", "B", "C", "D", "E")
+	writer.WriteRow("F", "G", "H", "I", "J")
+	writer.Flush()
+
+	// same thing with the Writer interface
+	fmt.Fprintln(writer, "A\tB\tC\tD\tE")
+	fmt.Fprintln(writer, "F\tG\tH\tI\tJ")
+	writer.Flush()
+
+	assertGolden(t, buf.Bytes(), "omit.txt")
+}

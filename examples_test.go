@@ -144,3 +144,22 @@ func ExampleBoxDrawingTableDecorator() {
 	// │ with │ a modern │ look  │
 	// └──────┴──────────┴───────┘
 }
+
+func ExampleOmit() {
+	writer := flexwriter.New()
+	writer.SetColumns(
+		flexwriter.Rigid{},
+		flexwriter.Omit{}, // the second column will not appear in the output
+		flexwriter.Rigid{},
+	)
+	// Omit can also be specified for the default column; here that means that
+	// all columns after the 3rd one will be omitted too
+	writer.SetDefaultColumn(flexwriter.Omit{})
+
+	writer.WriteRow("A", "B", "C", "D", "E")
+	writer.WriteRow("F", "G", "H", "I", "J")
+	writer.Flush()
+	// Output:
+	// A  C
+	// F  H
+}

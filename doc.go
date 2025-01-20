@@ -16,6 +16,8 @@ sized:
   - a [Flexed] is sized depending on the width of the output, regardless
     of the size of its content.
 
+A column can also be omitted from the output by using the [Omit] column type.
+
 The size of the columns is determined in this way:
 
   - the widths of Rigid columns are computed first, depending on the size
