@@ -33,10 +33,10 @@ func lorem(n int) string {
 
 var update = flag.Bool("update", false, "update golden files")
 
-func assertGolden(t *testing.T, actual []byte, filename string) {
+func assertGolden(t *testing.T, actual string, filename string) {
 	golden := filepath.Join("testdata", filename)
 	if *update {
-		if err := os.WriteFile(golden, actual, 0644); err != nil {
+		if err := os.WriteFile(golden, []byte(actual), 0644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -45,7 +45,26 @@ func assertGolden(t *testing.T, actual []byte, filename string) {
 		t.Fatal(err)
 	}
 
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, string(expected), actual)
+}
+
+func TestGrow(t *testing.T) {
+	var buf bytes.Buffer
+	writer := New()
+	writer.SetOutput(&buf)
+	writer.SetWidth(80)
+	writer.SetColumns(
+		Rigid{Min: 10},
+		Flexed{},
+		Flexed{Weight: 2},
+	)
+	writer.SetDecorator(GapDecorator{Gap: "|", Left: "|", Right: "|"})
+
+	writer.WriteRow("hello", "woooooooooooorld", "how are you")
+	writer.WriteRow("oh", "hi", "mark")
+	writer.Flush()
+
+	assertGolden(t, buf.String(), "grow.txt")
 }
 
 func TestSimple(t *testing.T) {
@@ -63,7 +82,29 @@ func TestSimple(t *testing.T) {
 	writer.WriteRow("helloooooooooo", lorem(10), "world")
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "simple.txt")
+	assertGolden(t, buf.String(), "simple.txt")
+}
+
+func TestMultipleShrinks(t *testing.T) {
+	var buf bytes.Buffer
+	writer := New()
+	writer.SetOutput(&buf)
+	writer.SetWidth(60)
+	writer.SetColumns(
+		// Basis: 0 will always try to be as small as its min-content
+		Flexbox{},
+		// will try to be as wide as its content but will shrink as needed
+		Flexbox{Shrink: 1, Basis: Auto},
+		Flexbox{Shrink: 2, Basis: Auto},
+		Flexbox{},
+	)
+	writer.SetDefaultColumn(Omit{})
+
+	writer.WriteRow("hello", lorem(10), lorem(10), "woooooooooooorld")
+	writer.WriteRow("hellooo ooooooo", lorem(10), lorem(10), "world")
+	writer.Flush()
+
+	assertGolden(t, buf.String(), "multishrink.txt")
 }
 
 func TestMultipleFlushes(t *testing.T) {
@@ -76,7 +117,7 @@ func TestMultipleFlushes(t *testing.T) {
 	writer.WriteRow("how", "are", "you")
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "multiflush.txt")
+	assertGolden(t, buf.String(), "multiflush.txt")
 }
 
 func TestAligments(t *testing.T) {
@@ -92,7 +133,7 @@ func TestAligments(t *testing.T) {
 	writer.WriteRow(lorem(10), lorem(10), lorem(10))
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "alignments.txt")
+	assertGolden(t, buf.String(), "alignments.txt")
 }
 
 func TestFlexed(t *testing.T) {
@@ -110,7 +151,7 @@ func TestFlexed(t *testing.T) {
 	writer.WriteRow(lorem(15), lorem(30), lorem(8))
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "flexed.txt")
+	assertGolden(t, buf.String(), "flexed.txt")
 }
 
 func TestDefaultColumn(t *testing.T) {
@@ -123,7 +164,7 @@ func TestDefaultColumn(t *testing.T) {
 	writer.WriteRow("oh", "hi", "mark")
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "defaultcol.txt")
+	assertGolden(t, buf.String(), "defaultcol.txt")
 }
 
 func TestFlushWithoutWrite(t *testing.T) {
@@ -159,7 +200,7 @@ func TestComplexText(t *testing.T) {
 	writer.WriteRow(complexTest, lorem(30), complexTest)
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "complex.txt")
+	assertGolden(t, buf.String(), "complex.txt")
 }
 
 func TestTabWriterCompat(t *testing.T) {
@@ -194,7 +235,7 @@ func TestTableDecorator(t *testing.T) {
 	writer.WriteRow(lorem(10), lorem(30), lorem(20))
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "table.txt")
+	assertGolden(t, buf.String(), "table.txt")
 }
 
 func TestTableDecoratorColor(t *testing.T) {
@@ -211,7 +252,7 @@ func TestTableDecoratorColor(t *testing.T) {
 	writer.WriteRow(lorem(10), lorem(30), lorem(20))
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "tablecolor.txt")
+	assertGolden(t, buf.String(), "tablecolor.txt")
 }
 
 func BenchmarkFlexwriter(b *testing.B) {
@@ -245,7 +286,7 @@ func TestDecoratorUnequalRowLens(t *testing.T) {
 	writer.WriteRow(1, 2, "fghij")
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "unequalrowlens.txt")
+	assertGolden(t, buf.String(), "unequalrowlens.txt")
 }
 
 func TestDecoratorIndices(t *testing.T) {
@@ -260,7 +301,7 @@ func TestDecoratorIndices(t *testing.T) {
 	writer.WriteRow("J", "K", "L")
 
 	writer.Flush()
-	assertGolden(t, buf.Bytes(), "decorator.txt")
+	assertGolden(t, buf.String(), "decorator.txt")
 }
 
 type debugDecorator struct{}
@@ -294,5 +335,5 @@ func TestOmit(t *testing.T) {
 	fmt.Fprintln(writer, "F\tG\tH\tI\tJ")
 	writer.Flush()
 
-	assertGolden(t, buf.Bytes(), "omit.txt")
+	assertGolden(t, buf.String(), "omit.txt")
 }

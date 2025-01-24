@@ -9,22 +9,24 @@ import (
 	"sync"
 
 	text "github.com/MichaelMure/go-term-text"
+	"github.com/hchargois/flexwriter/flex"
 	"golang.org/x/term"
 )
 
 // Column holds the configuration of a column for the flex writer. This
-// interface is sealed, use either [Rigid] or [Flexed] to create Columns.
+// interface is sealed, use one of the provided implementations:
+//   - [Flexbox]
+//   - [Rigid]
+//   - [Flexed]
+//   - [Shrinkable]
+//   - [Omit]
 type Column interface {
-	// validated returns a copy of the column where impossible or zero values
-	// have been replaced by correct defaults; doing it this way instead of
-	// having a validate() method that modifies the column in place has two
-	// advantages:
-	// - a validate() method would need a pointer receiver, and the columns
-	//   would need to be declared as pointers everywhere which is annoying;
-	// - using a copy makes sure the user cannot keep and modify the column
-	//   after it's used to configure the writer.
-	validated() Column
-	align() Alignment
+	flex() flexItem
+}
+
+type flexItem struct {
+	flex.Item
+	Alignment
 }
 
 // Rigid columns try to match the size of their content, as long
@@ -32,8 +34,12 @@ type Column interface {
 //
 // By setting Min and Max to the same value, you can create a column of a fixed
 // width.
+//
+// A Rigid is actually just a shortcut for a [Flexbox] with an Auto Basis, and
+// Grow and Shrink factors of 0. This is similar to a "flex: none" in CSS.
 type Rigid struct {
-	// Min is the minimum width of the column.
+	// Min is the minimum width of the column. If the content is smaller, the
+	// column will be padded.
 	Min int
 	// Max is the maximum width of the column, if the content is longer it will
 	// be wrapped. If Max is 0, then there is no maximum width.
@@ -42,25 +48,55 @@ type Rigid struct {
 	Align Alignment
 }
 
-func (r Rigid) validated() Column {
+func (r Rigid) flex() flexItem {
 	if r.Max != 0 && r.Min > r.Max {
 		r.Min = r.Max
 	}
-	return r
+	return flexItem{
+		Item: flex.Item{
+			Basis: Auto,
+			Min:   r.Min,
+			Max:   r.Max,
+		},
+		Alignment: r.Align,
+	}
 }
 
-func (r Rigid) width(dataWidth int) int {
-	if dataWidth < r.Min {
-		return r.Min
-	}
-	if r.Max != 0 && dataWidth > r.Max {
-		return r.Max
-	}
-	return dataWidth
+// Shrinkable columns try to match the size of their content, but if the width of
+// the output is too small, they can shrink up to their Min width.
+//
+// A Shrinkable is actually just a shortcut for a [Flexbox] with an Auto Basis, a
+// Grow of 0 and a Shrinkable of the given Weight, or 1 if 0/unset. This is similar
+// to a "flex: initial" in CSS.
+type Shrinkable struct {
+	// Weight is the shrink weight of the column; if 0 or less, it defaults to 1.
+	Weight int
+	// Min is the minimum width of the column. If the content is smaller, the
+	// column will be padded.
+	Min int
+	// Max is the maximum width of the column, if the content is longer it will
+	// be wrapped. If Max is 0, then there is no maximum width.
+	Max int
+	// Align is the alignment of the content within the column; default is left.
+	Align Alignment
 }
 
-func (r Rigid) align() Alignment {
-	return r.Align
+func (s Shrinkable) flex() flexItem {
+	if s.Max != 0 && s.Min > s.Max {
+		s.Min = s.Max
+	}
+	if s.Weight < 1 {
+		s.Weight = 1
+	}
+	return flexItem{
+		Item: flex.Item{
+			Basis:  Auto,
+			Shrink: s.Weight,
+			Min:    s.Min,
+			Max:    s.Max,
+		},
+		Alignment: s.Align,
+	}
 }
 
 // Omit columns will not appear in the output.
@@ -69,57 +105,97 @@ func (r Rigid) align() Alignment {
 // configuration than the row data.
 type Omit struct{}
 
-func (o Omit) validated() Column {
-	return o
+func (o Omit) flex() flexItem {
+	panic("Omit.flexed() should not be called")
 }
 
-func (o Omit) align() Alignment {
-	return Left
-}
+// Auto can be set as the Basis of a [Flexed] column to make the basis as large
+// as the content.
+const Auto = -1
 
 // Flexed columns take a size proportional to their weight (vs all other flexed
-// columns weights), within the width remaining after rigid columns are placed,
-// and regardless of the size of their content.
+// columns weights) within the available width, regardless of the size of their
+// content.
+//
+// A Flexed column is similar to a "flex: N" column in CSS.
 type Flexed struct {
-	// Weight is the flex weight of the column; if 0 or less, it defaults to 1.
+	// Weight is the grow weight of the column; if 0 or less, it defaults to 1.
 	Weight int
-	// Min is the minimum width of the column. Flexed columns need to have a
-	// min width because we need to ensure they have a sufficient width even if
-	// the output (e.g. terminal) width is too small to fit all the columns.
-	// If 0 or less, it defaults to 10.
+	// Min is the minimum width of the column. If 0, it defaults to the
+	// "min content" size, i.e. the size of the longest word in the content.
 	Min int
+	// Max is the maximum width of the column, if the content is longer it will
+	// be wrapped. If Max is 0, then there is no maximum width.
+	Max int
 	// Align is the alignment of the content within the column; default is left.
 	Align Alignment
 }
 
-func (f Flexed) validated() Column {
+func (f Flexed) flex() flexItem {
 	if f.Weight < 1 {
 		f.Weight = 1
 	}
-	if f.Min < 1 {
-		f.Min = 10
+	if f.Max != 0 && f.Min > f.Max {
+		f.Min = f.Max
 	}
-	return f
+	return flexItem{
+		Item: flex.Item{
+			Grow:   f.Weight,
+			Shrink: 1,
+			Basis:  0,
+			Min:    f.Min,
+			Max:    f.Max,
+		},
+		Alignment: f.Align,
+	}
 }
 
-func (f Flexed) width(remainingWidth int, totalWeights int) int {
-	w := remainingWidth * f.Weight / totalWeights
-	if w < f.Min {
-		return f.Min
-	}
-	return w
+// Flexbox columns allow you to specify the exact flex attributes as in CSS
+// flexbox; however note that default values are all zero, there are no "smart"
+// defaults as when using the "flex: ..." CSS syntax.
+type Flexbox struct {
+	// Basis is the flexbox basis, i.e. the initial size of the column before
+	// it grows or shrinks. Use the constant Auto (or -1) to make the basis
+	// equal to the content size.
+	Basis int
+	// Grow is the flexbox grow weight.
+	Grow int
+	// Shrink is the flexbox shrink weight.
+	Shrink int
+	// Min is the minimum width of the column. If 0, it defaults to the
+	// "min content" size, i.e. the size of the longest word in the content.
+	Min int
+	// Max is the maximum width of the column, if the content is longer it will
+	// be wrapped. If Max is 0, then there is no maximum width.
+	Max int
+	// Align is the alignment of the content within the column; default is left.
+	Align Alignment
 }
-func (f Flexed) align() Alignment {
-	return f.Align
+
+func (f Flexbox) flex() flexItem {
+	if f.Max != 0 && f.Min > f.Max {
+		f.Min = f.Max
+	}
+	return flexItem{
+		Item: flex.Item{
+			Basis:  f.Basis,
+			Grow:   f.Grow,
+			Shrink: f.Shrink,
+			Min:    f.Min,
+			Max:    f.Max,
+		},
+		Alignment: f.Align,
+	}
 }
 
 type Writer struct {
-	width           int
-	output          io.Writer
-	defaultCol      Column
-	columns         []Column // all column defs including Omits
-	filteredColumns []Column // column defs without Omits
-	deco            Decorator
+	width       int
+	output      io.Writer
+	omittedCols []bool     // whether each configured column is omitted
+	omitDefault bool       // whether unconfigured columns are omitted
+	columns     []flexItem // only non-omitted columns
+	defaultCol  flexItem
+	deco        Decorator
 
 	mu        sync.Mutex
 	buffer    []byte
@@ -131,14 +207,14 @@ func (w *Writer) SetColumns(cols ...Column) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.columns = transform(cols, func(col Column) Column {
-		return col.validated()
-	})
-	for _, col := range w.columns {
+	w.omittedCols = make([]bool, len(cols))
+	w.columns = nil
+	for i, col := range cols {
 		if _, ok := col.(Omit); ok {
+			w.omittedCols[i] = true
 			continue
 		}
-		w.filteredColumns = append(w.filteredColumns, col)
+		w.columns = append(w.columns, col.flex())
 	}
 }
 
@@ -149,7 +225,12 @@ func (w *Writer) SetDefaultColumn(col Column) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.defaultCol = col.validated()
+	if _, ok := col.(Omit); ok {
+		w.omitDefault = true
+		return
+	}
+	w.omitDefault = false
+	w.defaultCol = col.flex()
 }
 
 // SetOutput sets the output writer for this flex writer. If the output is a
@@ -196,12 +277,12 @@ func (w *Writer) SetDecorator(deco Decorator) {
 //   - a target width equal to the width of the standard output if it's a
 //     terminal, otherwise 80
 //   - a gap of 2 spaces between columns, none on the sides
-//   - a default column setting of an unlimited width, left-aligned rigid column
+//   - a default column setting of a left-aligned Shrinkable column
 func New() *Writer {
 	var writer Writer
 	writer.SetWidth(80)
 	writer.SetOutput(os.Stdout)
-	writer.SetDefaultColumn(Rigid{})
+	writer.SetDefaultColumn(Shrinkable{})
 	writer.SetDecorator(GapDecorator{Gap: "  "})
 	return &writer
 }
@@ -244,7 +325,7 @@ func (w *Writer) WriteRow(cells ...any) {
 func (w *Writer) writeRow(cells ...any) {
 	var filteredCells []any
 	for i, cell := range cells {
-		if _, ok := w.getColumnDef(i).(Omit); ok {
+		if w.isOmitted(i) {
 			continue
 		}
 		filteredCells = append(filteredCells, cell)
@@ -260,18 +341,27 @@ func (w *Writer) writeRow(cells ...any) {
 	w.colBuffer = append(w.colBuffer, scells)
 }
 
-func (w *Writer) getColumnDef(i int) Column {
+func (w *Writer) isOmitted(i int) bool {
+	if i < len(w.omittedCols) {
+		return w.omittedCols[i]
+	}
+	return w.omitDefault
+}
+
+func (w *Writer) getColumnDef(i int) flexItem {
 	if i < len(w.columns) {
 		return w.columns[i]
 	}
 	return w.defaultCol
 }
 
-func (w *Writer) getFilteredColumnDef(i int) Column {
-	if i < len(w.filteredColumns) {
-		return w.filteredColumns[i]
-	}
-	return w.defaultCol
+func (w *Writer) colMinContent(colIdx int) int {
+	return max(transform(w.colBuffer, func(row []string) int {
+		if colIdx >= len(row) {
+			return 0
+		}
+		return minContent(row[colIdx])
+	}))
 }
 
 func (w *Writer) computeWidths() []int {
@@ -283,34 +373,29 @@ func (w *Writer) computeWidths() []int {
 
 	nColumns := len(colLengths)
 
-	widths := make([]int, nColumns)
-
-	var sumRigidWidths int
-	var totalWeights int
+	flexItems := make([]flex.Item, nColumns)
 	for i := 0; i < nColumns; i++ {
-		col := w.getFilteredColumnDef(i)
-		switch tcol := col.(type) {
-		case Rigid:
-			w := tcol.width(colLengths[i])
-			widths[i] = w
-			sumRigidWidths += w
-		case Flexed:
-			totalWeights += tcol.Weight
+		col := w.getColumnDef(i)
+
+		var minSize int
+		if col.Min > 0 {
+			minSize = col.Min
+		} else {
+			minSize = w.colMinContent(i)
 		}
+		if col.Max > 0 && minSize > col.Max {
+			minSize = col.Max
+		}
+		it := col.Item
+		it.Min = minSize
+		it.Size = colLengths[i]
+
+		flexItems[i] = it
 	}
 
-	remainingWidth := w.width - sumRigidWidths
-	remainingWidth -= decoratorWidth(w.deco, nColumns)
-	for i := 0; i < nColumns; i++ {
-		col := w.getFilteredColumnDef(i)
-		if flexed, ok := col.(Flexed); ok {
-			w := flexed.width(remainingWidth, totalWeights)
-			remainingWidth -= w
-			totalWeights -= flexed.Weight
-			widths[i] = w
-		}
-	}
-	return widths
+	freeSpace := w.width - decoratorWidth(w.deco, nColumns)
+
+	return flex.ResolveFlexLengths(flexItems, freeSpace)
 }
 
 func (w *Writer) flushBuffer() {
@@ -362,7 +447,7 @@ func (w *Writer) Flush() error {
 		for _, line := range transposed {
 			out.WriteString(w.deco.ColumnSeparator(ri, 0))
 			for ci, col := range line {
-				colAlign := w.getFilteredColumnDef(ci).align()
+				colAlign := w.getColumnDef(ci).Alignment
 				if ci != len(line)-1 {
 					out.WriteString(align(col, widths[ci], colAlign, true))
 					out.WriteString(w.deco.ColumnSeparator(ri, ci+1))

@@ -163,3 +163,34 @@ func ExampleOmit() {
 	// A  C
 	// F  H
 }
+
+func ExampleShrinkable() {
+	writer := flexwriter.New()
+	writer.SetDefaultColumn(flexwriter.Shrinkable{})
+	writer.SetDecorator(flexwriter.AsciiTableDecorator())
+
+	writer.WriteRow("just", "a few", "short columns")
+	writer.WriteRow("no", "need", "to wrap")
+	writer.WriteRow("columns stay", "as small", "as required")
+	writer.Flush()
+
+	writer.WriteRow(
+		"but now",
+		"the row is much longer",
+		"and it can't all fit in a single line of the output",
+		"so the columns will shrink and contents will be wrapped")
+	writer.Flush()
+	// Output:
+	// +--------------+----------+---------------+
+	// | just         | a few    | short columns |
+	// +--------------+----------+---------------+
+	// | no           | need     | to wrap       |
+	// +--------------+----------+---------------+
+	// | columns stay | as small | as required   |
+	// +--------------+----------+---------------+
+	// +------+-------------+----------------------------+----------------------------+
+	// | but  | the row is  | and it can't all fit in a  | so the columns will shrink |
+	// | now  | much longer | single line of the output  | and contents will be       |
+	// |      |             |                            | wrapped                    |
+	// +------+-------------+----------------------------+----------------------------+
+}

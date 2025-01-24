@@ -8,9 +8,7 @@ go get github.com/hchargois/flexwriter
 
 Flexwriter arranges rows of data into columns with configurable widths and alignments.
 
-As the name suggests, it is inspired by (but not identical to) the CSS flexbox model to define column widths.
-To be more precise, it is actually inspired by Gio UI's variation of the flexbox model: 
-https://pkg.go.dev/gioui.org/layout#Flex
+As the name suggests, it implements the CSS flexbox model to define column widths.
 
 If the contents are too long, flexwriter automatically wraps the text over multiple lines.
 Text containing escape sequences (e.g. color codes) is correctly wrapped.
@@ -25,8 +23,9 @@ The output can be decorated with simple column separators or to look like tables
 import "github.com/hchargois/flexwriter"
 
 // by default, the flexwriter will output to standard output; and all
-// columns will default to being left-aligned rigids with no maximum width
-// (i.e. they will be exactly as wide as needed to fit their content);
+// columns will default to being "shrinkable" columns (i.e. they will match
+// their content size if it fits within the output width, but will shrink to
+// match the output width if the content is too big to fit on a single line);
 // and all columns will be separated by two spaces
 writer := flexwriter.New()
 
@@ -47,7 +46,42 @@ the   answer   is     42
 true  or       false  ?
 ```
 
-More complete examples showing how to configure the columns can be found in the [godoc](https://pkg.go.dev/github.com/hchargois/flexwriter).
+Here's another example showing how to configure the columns and set a table
+decorator, and that shows how the Shrinkable columns shrinks to fit in the
+configured width of the output (70 columns wide):
+
+```go
+writer := flexwriter.New()
+writer.SetColumns(
+    // first column, a Rigid, will not shrink and wrap
+    flexwriter.Rigid{},
+    // second column will
+    flexwriter.Shrinkable{})
+writer.SetDecorator(flexwriter.AsciiTableDecorator())
+writer.SetWidth(70)
+
+lorem := "Lorem ipsum dolor sit amet, consectetur adipiscing elit, "+
+"sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "+
+"ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip"
+
+writer.WriteRow("lorem ipsum says:", lorem)
+
+writer.Flush()
+```
+
+This outputs:
+
+```
++-------------------+------------------------------------------------+
+| lorem ipsum says: | Lorem ipsum dolor sit amet, consectetur        |
+|                   | adipiscing elit, sed do eiusmod tempor         |
+|                   | incididunt ut labore et dolore magna aliqua.   |
+|                   | Ut enim ad minim veniam, quis nostrud          |
+|                   | exercitation ullamco laboris nisi ut aliquip   |
++-------------------+------------------------------------------------+
+```
+
+Many more examples can be found in the [godoc](https://pkg.go.dev/github.com/hchargois/flexwriter).
 
 # Alternatives
 
@@ -58,5 +92,5 @@ More complete examples showing how to configure the columns can be found in the 
 
 # Thanks
 
- - [Gio UI](https://gioui.org) for the [flex model](https://pkg.go.dev/gioui.org/layout#Flex) inspiration
+ - [Gio UI](https://gioui.org) for the initial inspiration to use the [flex model](https://pkg.go.dev/gioui.org/layout#Flex)
  - [github.com/MichaelMure/go-term-text](https://github.com/MichaelMure/go-term-text) for the escape-sequence aware text wrapping
