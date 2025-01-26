@@ -109,7 +109,7 @@ func (o Omit) flex() flexItem {
 	panic("Omit.flexed() should not be called")
 }
 
-// Auto can be set as the Basis of a [Flexed] column to make the basis as large
+// Auto can be set as the Basis of a [Flexbox] column to make the basis as large
 // as the content.
 const Auto = -1
 
